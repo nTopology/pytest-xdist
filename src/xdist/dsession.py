@@ -21,6 +21,7 @@ from xdist.scheduler import LoadScheduling
 from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import Scheduling
 from xdist.scheduler import WorkStealingScheduling
+from xdist.scheduler import CustomGroup
 from xdist.workermanage import NodeManager
 from xdist.workermanage import WorkerController
 
@@ -123,6 +124,8 @@ class DSession:
             return LoadGroupScheduling(config, log)
         if dist == "worksteal":
             return WorkStealingScheduling(config, log)
+        if dist == "customgroup":
+            return CustomGroup(config, log)
         return None
 
     @pytest.hookimpl
