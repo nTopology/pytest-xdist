@@ -143,7 +143,7 @@ class CustomGroup:
 
         This is called by the ``DSession.worker_testreport`` hook.
         """
-
+        # breakpoint()
         self.node2pending[node].remove(item_index)
         self.check_schedule(node, duration=duration)
 
@@ -164,7 +164,7 @@ class CustomGroup:
     ) -> None:
         raise NotImplementedError()
 
-    def check_schedule(self, node: WorkerController, duration: float = 0) -> None:
+    def check_schedule(self, node: WorkerController, duration: float = 0, from_dsession=False) -> None:
         """Maybe schedule new items on the node.
 
         If there are any globally pending nodes left then this will
@@ -172,16 +172,24 @@ class CustomGroup:
         ``duration`` of the last test is optionally used as a
         heuristic to influence how many tests the node is assigned.
         """
-        breakpoint()
         if node.shutting_down:
             return
+        # if len(self.node2pending[node]) == 1:
+        #     node.shutdown()
+        #     node.setup()
+        #     return
+
         if self.pending:
             any_working = False
             for node in self.nodes:
-                if self.node2pending[node]:
+                if len(self.node2pending[node]) not in [0, 1]:
                     any_working = True
+            # any_working = False
+            # for node in self.nodes:
+            #     if len(self.node2pending[node]) not in [0]:
+            #         any_working = True
 
-            if not any_working:
+            if not any_working and from_dsession:
                 for dist_group_key in self.dist_groups:
                     dist_group = self.dist_groups[dist_group_key]
                     nodes = cycle(self.nodes[0:dist_group['group_workers']])
@@ -357,8 +365,9 @@ class CustomGroup:
         #if not self.pending:
             #initial distribution sent all tests, start node shutdown
         #self.check_schedule()
-        for node in self.nodes:
-            self.check_schedule(node)
+        # breakpoint()
+        # for node in self.nodes:
+        #     self.check_schedule(node)
 
     def _send_tests(self, node: WorkerController, num: int) -> None:
         tests_per_node = self.pending[:num]

@@ -148,6 +148,7 @@ class DSession:
 
     def loop_once(self) -> None:
         """Process one callback from one of the workers."""
+        x = 0
         while 1:
             if not self._active_nodes:
                 # If everything has died stop looping
@@ -157,8 +158,19 @@ class DSession:
                 eventcall = self.queue.get(timeout=2.0)
                 break
             except Empty:
+                x += 1
+                self.terminal.write_line(f"Here! iteration: {x}\n{self.sched.node2pending}\n\n")
+                all_one = True
+                for node in self.sched.nodes:
+                    if len(self.sched.node2pending[node]) not in [0, 1]:
+                        all_one = False
+                if all_one:
+                    self.terminal.write_line(f"Calling check_schedule")
+                    self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
+                #breakpoint()
                 continue
         callname, kwargs = eventcall
+        # self.terminal.write_line(f"Got callname: {callname}")
         assert callname, kwargs
         method = "worker_" + callname
         call = getattr(self, method)
