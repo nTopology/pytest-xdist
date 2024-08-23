@@ -55,6 +55,7 @@ class CustomGroup:
         # TODO: Type annotation incorrect
         self.dist_groups: dict[str, str] = {}
         self.is_first_time = True
+        self.do_resched = False
 
     @property
     def nodes(self) -> list[WorkerController]:

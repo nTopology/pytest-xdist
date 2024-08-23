@@ -59,6 +59,9 @@ class DSession:
         self._failed_collection_errors: dict[object, bool] = {}
         self._active_nodes: set[WorkerController] = set()
         self._failed_nodes_count = 0
+        self.saved_put = None
+        self.remake_nodes = False
+        self.do_breakpoint = False
         self._max_worker_restart = get_default_max_worker_restart(self.config)
         # summary message to print at the end of the session
         self._summary_report: str | None = None
@@ -88,6 +91,7 @@ class DSession:
         soon as nodes start they will emit the worker_workerready event.
         """
         self.nodemanager = NodeManager(self.config)
+        self.saved_put = self.queue.put
         nodes = self.nodemanager.setup_nodes(putevent=self.queue.put)
         self._active_nodes.update(nodes)
         self._session = session
@@ -149,29 +153,71 @@ class DSession:
     def loop_once(self) -> None:
         """Process one callback from one of the workers."""
         x = 0
+        num_nodes = 0
         while 1:
             if not self._active_nodes:
-                # If everything has died stop looping
-                self.triggershutdown()
-                raise RuntimeError("Unexpectedly no active workers available")
+                if self.remake_nodes:
+                    self.remake_nodes = False
+                    new_nodes = self.nodemanager.setup_nodes(self.saved_put)
+                    self._active_nodes = set()
+                    self._active_nodes.update(new_nodes)
+                    #breakpoint()
+                    self.sched.node2pending = {}
+                    self.sched.do_resched = True
+                    # for node in new_nodes:
+                    #     self.sched.add_node(node)
+                    #self.sched.check_schedule(new_nodes[0], 1.0, True)
+                else:
+                    # If everything has died stop looping
+                    self.triggershutdown()
+                    raise RuntimeError("Unexpectedly no active workers available")
             try:
                 eventcall = self.queue.get(timeout=2.0)
                 break
             except Empty:
                 x += 1
+                # if self.do_breakpoint:
+                #     breakpoint()
+                # self.nodemanager = NodeManager(self.config)
+                # nodes = self.nodemanager.setup_nodes(putevent=self.queue.put)
+                # self._active_nodes.update(nodes)
                 self.terminal.write_line(f"Here! iteration: {x}\n{self.sched.node2pending}\n\n")
                 all_one = True
                 for node in self.sched.nodes:
                     if len(self.sched.node2pending[node]) not in [0, 1]:
                         all_one = False
                 if all_one:
-                    self.terminal.write_line(f"Calling check_schedule")
-                    self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
+                    #self.terminal.write_line(f"Calling check_schedule")
+                    #self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
+                    # If all have 1 test remaining (or 0, since some nodes won't be used)
+                    # Then have each node shutdown, then restart each node, and replace the nodes in sched.nodes,
+                    # then call check_schedule()
+                    if not self.sched.do_resched:
+                        if len(self.sched.pending) != 0:
+                            self.remake_nodes = True
+                            num_nodes = len(self.sched.nodes)
+                        for node in self.sched.nodes:
+                            node.shutdown()
+                            #node.ensure_teardown()
+                        # # TODO: Currently throws error here since gateway IDs are in execnet still
+                        # # execnet has _unregister() method which must be called first. It appears in node.shutdown()
+                        # # this is not happening, so if we can find a way to teardown the node fully, this might work
+                        # new_nodes = self.nodemanager.setup_nodes(self.saved_put)
+                        # self._active_nodes = set()
+                        # self._active_nodes.update(new_nodes)
+                        # breakpoint()
+                        # for node in new_nodes:
+                        #     self.sched.add_node(node)
+                        #self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
+                    else:
+                        self.sched.do_resched = False
+                        self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
                 #breakpoint()
                 continue
         callname, kwargs = eventcall
         # self.terminal.write_line(f"Got callname: {callname}")
         assert callname, kwargs
+        self.terminal.write_line(f"Making call: {callname}")
         method = "worker_" + callname
         call = getattr(self, method)
         self.log("calling method", method, kwargs)
@@ -213,6 +259,12 @@ class DSession:
         The node might not be in the scheduler if it had not emitted
         workerready before shutdown was triggered.
         """
+        if self.remake_nodes:
+            for node in self.sched.nodes:
+                node.ensure_teardown()
+                self._active_nodes = set()
+            self.do_breakpoint = True
+            return
         self.config.hook.pytest_testnodedown(node=node, error=None)
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
             self.shouldstop = f"{node} received keyboard-interrupt"
