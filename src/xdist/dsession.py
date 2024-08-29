@@ -157,6 +157,7 @@ class DSession:
         while 1:
             if not self._active_nodes:
                 if self.remake_nodes:
+                    self.terminal.write_line("\n")
                     self.remake_nodes = False
                     new_nodes = self.nodemanager.setup_nodes(self.saved_put)
                     self._active_nodes = set()
