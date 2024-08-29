@@ -157,6 +157,7 @@ class DSession:
         while 1:
             if not self._active_nodes:
                 if self.remake_nodes:
+                    self.terminal.write_line(f"Remaking nodes, overwriting node2pending")
                     self.remake_nodes = False
                     new_nodes = self.nodemanager.setup_nodes(self.saved_put)
                     self._active_nodes = set()
@@ -196,6 +197,7 @@ class DSession:
                         if len(self.sched.pending) != 0:
                             self.remake_nodes = True
                             num_nodes = len(self.sched.nodes)
+                        self.terminal.write_line(f"Shutting down all nodes")
                         for node in self.sched.nodes:
                             node.shutdown()
                             #node.ensure_teardown()
@@ -249,6 +251,7 @@ class DSession:
             node.shutdown()
         else:
             assert self.sched is not None
+            self.terminal.write_line(f"Running add node for {node}")
             self.sched.add_node(node)
 
     def worker_workerfinished(self, node: WorkerController) -> None:
@@ -260,9 +263,8 @@ class DSession:
         workerready before shutdown was triggered.
         """
         if self.remake_nodes:
-            for node in self.sched.nodes:
-                node.ensure_teardown()
-                self._active_nodes = set()
+            node.ensure_teardown()
+            self._active_nodes.remove(node)
             self.do_breakpoint = True
             return
         self.config.hook.pytest_testnodedown(node=node, error=None)
