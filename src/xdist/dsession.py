@@ -157,7 +157,6 @@ class DSession:
         while 1:
             if not self._active_nodes:
                 if self.remake_nodes:
-                    self.terminal.write_line(f"Remaking nodes, overwriting node2pending")
                     self.remake_nodes = False
                     new_nodes = self.nodemanager.setup_nodes(self.saved_put)
                     self._active_nodes = set()
@@ -182,7 +181,6 @@ class DSession:
                 # self.nodemanager = NodeManager(self.config)
                 # nodes = self.nodemanager.setup_nodes(putevent=self.queue.put)
                 # self._active_nodes.update(nodes)
-                self.terminal.write_line(f"Here! iteration: {x}\n{self.sched.node2pending}\n\n")
                 all_one = True
                 for node in self.sched.nodes:
                     if len(self.sched.node2pending[node]) not in [0, 1]:
@@ -197,7 +195,6 @@ class DSession:
                         if len(self.sched.pending) != 0:
                             self.remake_nodes = True
                             num_nodes = len(self.sched.nodes)
-                        self.terminal.write_line(f"Shutting down all nodes")
                         for node in self.sched.nodes:
                             node.shutdown()
                             #node.ensure_teardown()
@@ -219,7 +216,6 @@ class DSession:
         callname, kwargs = eventcall
         # self.terminal.write_line(f"Got callname: {callname}")
         assert callname, kwargs
-        self.terminal.write_line(f"Making call: {callname}")
         method = "worker_" + callname
         call = getattr(self, method)
         self.log("calling method", method, kwargs)
@@ -251,7 +247,6 @@ class DSession:
             node.shutdown()
         else:
             assert self.sched is not None
-            self.terminal.write_line(f"Running add node for {node}")
             self.sched.add_node(node)
 
     def worker_workerfinished(self, node: WorkerController) -> None:
