@@ -41,6 +41,7 @@ class CustomGroup:
     """
 
     def __init__(self, config: pytest.Config, log: Producer | None = None) -> None:
+        self.terminal = config.pluginmanager.getplugin("terminalreporter")
         self.numnodes = len(parse_spec_config(config))
         self.node2collection: dict[WorkerController, list[str]] = {}
         self.node2pending: dict[WorkerController, list[int]] = {}
@@ -54,6 +55,7 @@ class CustomGroup:
         self.maxschedchunk = self.config.getoption("maxschedchunk")
         # TODO: Type annotation incorrect
         self.dist_groups: dict[str, str] = {}
+        self.pending_groups: list[str] = []
         self.is_first_time = True
         self.do_resched = False
 
@@ -174,6 +176,7 @@ class CustomGroup:
         heuristic to influence how many tests the node is assigned.
         """
         if node.shutting_down:
+            self.terminal.write_line(f"{node.workerinput['workerid']} is shutting down")
             return
         # if len(self.node2pending[node]) == 1:
         #     node.shutdown()
@@ -191,14 +194,14 @@ class CustomGroup:
             #         any_working = True
 
             if not any_working and from_dsession:
-                for dist_group_key in self.dist_groups:
+                if self.pending_groups:
+                    dist_group_key = self.pending_groups.pop(0)
                     dist_group = self.dist_groups[dist_group_key]
                     nodes = cycle(self.nodes[0:dist_group['group_workers']])
                     for _ in range(len(dist_group['test_indices'])):
                         self._send_tests_group(next(nodes), 1, dist_group_key)
-                    pending_nodes = self.nodes[0:dist_group['group_workers']]
                     del self.dist_groups[dist_group_key]
-                    break
+                    self.terminal.write_line(f"Processed scheduling for {dist_group_key}")
         #     # how many nodes do we have?
         #     num_nodes = len(self.node2pending)
         #     # if our node goes below a heuristic minimum, fill it out to
@@ -217,6 +220,7 @@ class CustomGroup:
         #         maxschedchunk = max(2 - len(node_pending), self.maxschedchunk)
         #         self._send_tests(node, min(num_send, maxschedchunk))
         else:
+            self.terminal.write_line(f"Shutting down {node.workerinput['workerid']} because nothing is pending")
             node.shutdown()
 
         self.log("num items waiting for node:", len(self.pending))
@@ -261,6 +265,7 @@ class CustomGroup:
 
         # Initial distribution already happened, reschedule on all nodes
         if self.collection is not None:
+            self.terminal.write_line("\nRe-scheduling")
             for node in self.nodes:
                 self.check_schedule(node)
             return
@@ -305,8 +310,10 @@ class CustomGroup:
                     'pending_indices': existing_indices
                 }
             self.dist_groups = dist_groups
+            self.pending_groups = list(dist_groups.keys())
             self.is_first_time = False
         else:
+            self.terminal.write_line("Not first time")
             for node in self.nodes:
                 self.check_schedule(node)
 
@@ -316,14 +323,17 @@ class CustomGroup:
         ## new attempt
 
         ## end new attempt
+        if not self.pending_groups:
+            return
+        dist_group_key = self.pending_groups.pop(0)
+        dist_group = self.dist_groups[dist_group_key]
+        nodes = cycle(self.nodes[0:dist_group['group_workers']])
+        for _ in range(len(dist_group['test_indices'])):
+            self._send_tests_group(next(nodes), 1, dist_group_key)
+        del self.dist_groups[dist_group_key]
+        self.terminal.write_line(f"Processed scheduling for {dist_group_key}")
 
-        for dist_group_key in self.dist_groups:
-            dist_group = self.dist_groups[dist_group_key]
-            nodes = cycle(self.nodes[0:dist_group['group_workers']])
-            for _ in range(len(dist_group['test_indices'])):
-                self._send_tests_group(next(nodes), 1, dist_group_key)
-            del self.dist_groups[dist_group_key]
-            break
+
             #worker_int = WorkerInteractor(self.nodes[0].config, self.nodes[0].channel)
             #new_conf = self.nodes[0].config.__dict__['workerinput'] = self.nodes[0].workerinput
             #worker_int = self.nodes[0].RemoteHook.pytest_xdist_getremotemodule(self).WorkerInteractor(new_conf, self.nodes[0].channel)
@@ -384,6 +394,7 @@ class CustomGroup:
             for test_index in tests_per_node:
                 self.pending.remove(test_index)
             self.node2pending[node].extend(tests_per_node)
+            self.terminal.write_line(f"Send {'-'.join([str(x) for x in tests_per_node])} to {node.workerinput['workerid']}")
             node.send_runtest_some(tests_per_node)
 
 

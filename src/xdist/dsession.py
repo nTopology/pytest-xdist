@@ -161,6 +161,11 @@ class DSession:
                     self.remake_nodes = False
                     new_nodes = self.nodemanager.setup_nodes(self.saved_put)
                     self._active_nodes = set()
+
+                    num_workers = self.sched.dist_groups[self.sched.pending_groups[0]]['group_workers']
+                    if num_workers < len(self.nodemanager.specs):
+                        self.nodemanager.specs = self.nodemanager.specs[0:num_workers]
+
                     self._active_nodes.update(new_nodes)
                     #breakpoint()
                     self.sched.node2pending = {}
