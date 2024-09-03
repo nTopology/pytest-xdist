@@ -176,7 +176,7 @@ class CustomGroup:
         heuristic to influence how many tests the node is assigned.
         """
         if node.shutting_down:
-            self.terminal.write_line(f"{node.workerinput['workerid']} is shutting down")
+            self.terminal.write_line(f"{node.workerinput['workerid']} is already shutting down")
             return
         # if len(self.node2pending[node]) == 1:
         #     node.shutdown()
