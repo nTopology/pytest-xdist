@@ -176,7 +176,7 @@ class CustomGroup:
         heuristic to influence how many tests the node is assigned.
         """
         if node.shutting_down:
-            #self.terminal.write_line(f"{node.workerinput['workerid']} is already shutting down")
+            self.terminal.write_line(f"{node.workerinput['workerid']} is already shutting down")
             return
         # if len(self.node2pending[node]) == 1:
         #     node.shutdown()
@@ -201,7 +201,7 @@ class CustomGroup:
                     for _ in range(len(dist_group['test_indices'])):
                         self._send_tests_group(next(nodes), 1, dist_group_key)
                     del self.dist_groups[dist_group_key]
-                    #self.terminal.write_line(f"Processed scheduling for {dist_group_key}")
+                    self.terminal.write_line(f"Processed scheduling for {dist_group_key}")
         #     # how many nodes do we have?
         #     num_nodes = len(self.node2pending)
         #     # if our node goes below a heuristic minimum, fill it out to
@@ -220,8 +220,10 @@ class CustomGroup:
         #         maxschedchunk = max(2 - len(node_pending), self.maxschedchunk)
         #         self._send_tests(node, min(num_send, maxschedchunk))
         else:
-            #self.terminal.write_line(f"Shutting down {node.workerinput['workerid']} because nothing is pending")
-            node.shutdown()
+            pending = self.node2pending.get(node)
+            if len(pending) < 2:
+                self.terminal.write_line(f"Shutting down {node.workerinput['workerid']} because only one case is pending")
+                node.shutdown()
 
         self.log("num items waiting for node:", len(self.pending))
 
@@ -265,7 +267,7 @@ class CustomGroup:
 
         # Initial distribution already happened, reschedule on all nodes
         if self.collection is not None:
-           #self.terminal.write_line("\nRe-scheduling")
+            #self.terminal.write_line("\nRe-scheduling")
             for node in self.nodes:
                 self.check_schedule(node)
             return
@@ -313,7 +315,7 @@ class CustomGroup:
             self.pending_groups = list(dist_groups.keys())
             self.is_first_time = False
         else:
-            #self.terminal.write_line("Not first time")
+            self.terminal.write_line("Not first time")
             for node in self.nodes:
                 self.check_schedule(node)
 
@@ -331,7 +333,7 @@ class CustomGroup:
         for _ in range(len(dist_group['test_indices'])):
             self._send_tests_group(next(nodes), 1, dist_group_key)
         del self.dist_groups[dist_group_key]
-        #self.terminal.write_line(f"Processed scheduling for {dist_group_key}")
+        self.terminal.write_line(f"Processed scheduling for {dist_group_key}")
 
 
             #worker_int = WorkerInteractor(self.nodes[0].config, self.nodes[0].channel)
