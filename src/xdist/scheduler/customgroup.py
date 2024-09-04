@@ -146,7 +146,6 @@ class CustomGroup:
 
         This is called by the ``DSession.worker_testreport`` hook.
         """
-        # breakpoint()
         self.node2pending[node].remove(item_index)
         self.check_schedule(node, duration=duration)
 
