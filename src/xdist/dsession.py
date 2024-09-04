@@ -61,7 +61,6 @@ class DSession:
         self._failed_nodes_count = 0
         self.saved_put = None
         self.remake_nodes = False
-        self.do_breakpoint = False
         self._max_worker_restart = get_default_max_worker_restart(self.config)
         # summary message to print at the end of the session
         self._summary_report: str | None = None
@@ -152,11 +151,10 @@ class DSession:
 
     def loop_once(self) -> None:
         """Process one callback from one of the workers."""
-        x = 0
-        num_nodes = 0
         while 1:
             if not self._active_nodes:
-                if self.remake_nodes:
+                # Worker teardown + recreation only occurs for CustomGroup Scheduler
+                if self.remake_nodes and isinstance(self.sched, CustomGroup):
                     self.terminal.write_line("\n")
                     self.remake_nodes = False
 
@@ -168,60 +166,37 @@ class DSession:
                     new_nodes = self.nodemanager.setup_nodes(self.saved_put)
                     self._active_nodes = set()
                     self._active_nodes.update(new_nodes)
-                    #breakpoint()
                     self.sched.node2pending = {}
                     self.sched.do_resched = True
-                    # for node in new_nodes:
-                    #     self.sched.add_node(node)
-                    #self.sched.check_schedule(new_nodes[0], 1.0, True)
                 else:
-                    # If everything has died stop looping
+                    # We aren't using CustomGroup scheduler and everything has died: stop looping
                     self.triggershutdown()
                     raise RuntimeError("Unexpectedly no active workers available")
             try:
                 eventcall = self.queue.get(timeout=2.0)
                 break
             except Empty:
-                x += 1
-                # if self.do_breakpoint:
-                #     breakpoint()
-                # self.nodemanager = NodeManager(self.config)
-                # nodes = self.nodemanager.setup_nodes(putevent=self.queue.put)
-                # self._active_nodes.update(nodes)
-                all_one = True
-                for node in self.sched.nodes:
-                    if len(self.sched.node2pending[node]) not in [0, 1]:
-                        all_one = False
-                if all_one:
-                    #self.terminal.write_line(f"Calling check_schedule")
-                    #self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
-                    # If all have 1 test remaining (or 0, since some nodes won't be used)
-                    # Then have each node shutdown, then restart each node, and replace the nodes in sched.nodes,
-                    # then call check_schedule()
-                    if not self.sched.do_resched:
-                        if len(self.sched.pending) != 0:
-                            self.remake_nodes = True
-                            num_nodes = len(self.sched.nodes)
-                        for node in self.sched.nodes:
-                            node.shutdown()
-                            #node.ensure_teardown()
-                        # # TODO: Currently throws error here since gateway IDs are in execnet still
-                        # # execnet has _unregister() method which must be called first. It appears in node.shutdown()
-                        # # this is not happening, so if we can find a way to teardown the node fully, this might work
-                        # new_nodes = self.nodemanager.setup_nodes(self.saved_put)
-                        # self._active_nodes = set()
-                        # self._active_nodes.update(new_nodes)
-                        # breakpoint()
-                        # for node in new_nodes:
-                        #     self.sched.add_node(node)
-                        #self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
-                    else:
-                        self.sched.do_resched = False
-                        self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
-                #breakpoint()
+                # Custom logic for CustomGroup scheduler:
+                if isinstance(self.sched, CustomGroup):
+                    all_one = True
+                    for node in self.sched.nodes:
+                        if len(self.sched.node2pending[node]) not in [0, 1]:
+                            all_one = False
+                    if all_one:
+                        # If all have 1 test remaining (or 0, since some nodes won't be used)
+                        # Then have each node shutdown, then restart each node, and replace the nodes in sched.nodes,
+                        # then call check_schedule()
+                        if not self.sched.do_resched:
+                            if len(self.sched.pending) != 0:
+                                self.remake_nodes = True
+                            for node in self.sched.nodes:
+                                node.shutdown()
+                        else:
+                            self.sched.do_resched = False
+                            self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
                 continue
+
         callname, kwargs = eventcall
-        # self.terminal.write_line(f"Got callname: {callname}")
         assert callname, kwargs
         method = "worker_" + callname
         call = getattr(self, method)

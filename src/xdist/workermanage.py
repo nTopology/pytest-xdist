@@ -302,8 +302,6 @@ class WorkerController:
         self._down = False
         self._shutdown_sent = False
         self.log = Producer(f"workerctl-{gateway.id}", enabled=config.option.debug)
-        self.is_custom = False
-        self.tests_total = []
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} {self.gateway.id}>"

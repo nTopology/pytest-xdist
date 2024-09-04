@@ -178,20 +178,12 @@ class CustomGroup:
         if node.shutting_down:
             self.terminal.write_line(f"{node.workerinput['workerid']} is already shutting down")
             return
-        # if len(self.node2pending[node]) == 1:
-        #     node.shutdown()
-        #     node.setup()
-        #     return
 
         if self.pending:
             any_working = False
             for node in self.nodes:
                 if len(self.node2pending[node]) not in [0, 1]:
                     any_working = True
-            # any_working = False
-            # for node in self.nodes:
-            #     if len(self.node2pending[node]) not in [0]:
-            #         any_working = True
 
             if not any_working and from_dsession:
                 if self.pending_groups:
@@ -202,23 +194,7 @@ class CustomGroup:
                         self._send_tests_group(next(nodes), 1, dist_group_key)
                     del self.dist_groups[dist_group_key]
                     self.terminal.write_line(f"Processed scheduling for {dist_group_key}")
-        #     # how many nodes do we have?
-        #     num_nodes = len(self.node2pending)
-        #     # if our node goes below a heuristic minimum, fill it out to
-        #     # heuristic maximum
-        #     items_per_node_min = max(2, len(self.pending) // num_nodes // 4)
-        #     items_per_node_max = max(2, len(self.pending) // num_nodes // 2)
-        #     node_pending = self.node2pending[node]
-        #     if len(node_pending) < items_per_node_min:
-        #         if duration >= 0.1 and len(node_pending) >= 2:
-        #             # seems the node is doing long-running tests
-        #             # and has enough items to continue
-        #             # so let's rather wait with sending new items
-        #             return
-        #         num_send = items_per_node_max - len(node_pending)
-        #         # keep at least 2 tests pending even if --maxschedchunk=1
-        #         maxschedchunk = max(2 - len(node_pending), self.maxschedchunk)
-        #         self._send_tests(node, min(num_send, maxschedchunk))
+
         else:
             pending = self.node2pending.get(node)
             if len(pending) < 2:
@@ -267,7 +243,6 @@ class CustomGroup:
 
         # Initial distribution already happened, reschedule on all nodes
         if self.collection is not None:
-            #self.terminal.write_line("\nRe-scheduling")
             for node in self.nodes:
                 self.check_schedule(node)
             return
@@ -287,7 +262,7 @@ class CustomGroup:
             self.maxschedchunk = len(self.collection)
 
         dist_groups = {}
-        #####
+
         if self.is_first_time:
             for i, test in enumerate(self.collection):
                 if '@' in test:
@@ -315,16 +290,9 @@ class CustomGroup:
             self.pending_groups = list(dist_groups.keys())
             self.is_first_time = False
         else:
-            self.terminal.write_line("Not first time")
             for node in self.nodes:
                 self.check_schedule(node)
 
-        # TODO: 8/14/2024: dist_groups appear to be correct, but execution on workers is all janked up
-        # figure out what is going on in this for loop and correct it for a bare bones prototype
-
-        ## new attempt
-
-        ## end new attempt
         if not self.pending_groups:
             return
         dist_group_key = self.pending_groups.pop(0)
@@ -334,53 +302,6 @@ class CustomGroup:
             self._send_tests_group(next(nodes), 1, dist_group_key)
         del self.dist_groups[dist_group_key]
         self.terminal.write_line(f"Processed scheduling for {dist_group_key}")
-
-
-            #worker_int = WorkerInteractor(self.nodes[0].config, self.nodes[0].channel)
-            #new_conf = self.nodes[0].config.__dict__['workerinput'] = self.nodes[0].workerinput
-            #worker_int = self.nodes[0].RemoteHook.pytest_xdist_getremotemodule(self).WorkerInteractor(new_conf, self.nodes[0].channel)
-            # while True:
-            #     # Loop and check node status, do not move on to next dist_group until all
-            #     # nodes in the cycle are idle
-            #     node = next(nodes)
-            #     if self.node2pending[node]:
-            #         continue
-            #     else:
-            #         breakpoint()
-        # breakpoint()
-        #####
-
-        # # Send a batch of tests to run. If we don't have at least two
-        # # tests per node, we have to send them all so that we can send
-        # # shutdown signals and get all nodes working.
-        # if len(self.pending) < 2 * len(self.nodes):
-        #     # Distribute tests round-robin. Try to load all nodes if there are
-        #     # enough tests. The other branch tries sends at least 2 tests
-        #     # to each node - which is suboptimal when you have less than
-        #     # 2 * len(nodes) tests.
-        #     nodes = cycle(self.nodes)
-        #     for _ in range(len(self.pending)):
-        #         self._send_tests(next(nodes), 1)
-        # else:
-        #     # Send batches of consecutive tests. By default, pytest sorts tests
-        #     # in order for optimal single-threaded execution, minimizing the
-        #     # number of necessary fixture setup/teardown. Try to keep that
-        #     # optimal order for every worker.
-
-        #     # how many items per node do we have about?
-        #     items_per_node = len(self.collection) // len(self.node2pending)
-        #     # take a fraction of tests for initial distribution
-        #     node_chunksize = min(items_per_node // 4, self.maxschedchunk)
-        #     node_chunksize = max(node_chunksize, 2)
-        #     # and initialize each node with a chunk of tests
-        #     for node in self.nodes:
-        #         self._send_tests(node, node_chunksize)
-        #if not self.pending:
-            #initial distribution sent all tests, start node shutdown
-        #self.check_schedule()
-        # breakpoint()
-        # for node in self.nodes:
-        #     self.check_schedule(node)
 
     def _send_tests(self, node: WorkerController, num: int) -> None:
         tests_per_node = self.pending[:num]
@@ -396,7 +317,6 @@ class CustomGroup:
             for test_index in tests_per_node:
                 self.pending.remove(test_index)
             self.node2pending[node].extend(tests_per_node)
-            #self.terminal.write_line(f"Send {'-'.join([str(x) for x in tests_per_node])} to {node.workerinput['workerid']}")
             node.send_runtest_some(tests_per_node)
 
 
