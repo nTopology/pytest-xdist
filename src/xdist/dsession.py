@@ -178,11 +178,11 @@ class DSession:
             except Empty:
                 # Custom logic for CustomGroup scheduler:
                 if isinstance(self.sched, CustomGroup):
-                    all_one = True
+                    all_nodes_finishing = True
                     for node in self.sched.nodes:
                         if len(self.sched.node2pending[node]) not in [0, 1]:
-                            all_one = False
-                    if all_one:
+                            all_nodes_finishing = False
+                    if all_nodes_finishing:
                         # If all have 1 test remaining (or 0, since some nodes won't be used)
                         # Then have each node shutdown, then restart each node, and replace the nodes in sched.nodes,
                         # then call check_schedule()
@@ -242,7 +242,6 @@ class DSession:
         if self.remake_nodes:
             node.ensure_teardown()
             self._active_nodes.remove(node)
-            self.do_breakpoint = True
             return
         self.config.hook.pytest_testnodedown(node=node, error=None)
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
