@@ -201,6 +201,7 @@ class WorkerInteractor:
             "runtest_protocol_complete", item_index=self.item_index, duration=duration
         )
 
+    @pytest.mark.trylast
     def pytest_collection_modifyitems(
         self,
         config: pytest.Config,
