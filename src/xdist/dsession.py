@@ -61,6 +61,7 @@ class DSession:
         self._failed_nodes_count = 0
         self.saved_put = None
         self.remake_nodes = False
+        self.actually_started = False
         self._max_worker_restart = get_default_max_worker_restart(self.config)
         # summary message to print at the end of the session
         self._summary_report: str | None = None
@@ -182,7 +183,7 @@ class DSession:
                     for node in self.sched.nodes:
                         if len(self.sched.node2pending[node]) not in [0, 1]:
                             all_nodes_finishing = False
-                    if all_nodes_finishing:
+                    if all_nodes_finishing and self.actually_started:
                         # If all have 1 test remaining (or 0, since some nodes won't be used)
                         # Then have each node shutdown, then restart each node, and replace the nodes in sched.nodes,
                         # then call check_schedule()
@@ -348,6 +349,7 @@ class DSession:
                     self.terminal.write_line(
                         f"scheduling tests via {self.sched.__class__.__name__}"
                     )
+            self.actually_started = True
             self.sched.schedule()
 
     def worker_logstart(
