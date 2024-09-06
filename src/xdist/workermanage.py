@@ -11,6 +11,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 from typing import Union
+from typing import Optional
 import uuid
 import warnings
 
@@ -82,7 +83,7 @@ class NodeManager:
     def setup_nodes(
         self,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
-        max_nodes: Union[int, None] = None    
+        max_nodes: Optional[int] = None    
     ) -> list[WorkerController]:
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
