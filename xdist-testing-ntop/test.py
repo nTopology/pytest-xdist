@@ -1,14 +1,6 @@
 import pytest
 import time
-import pathlib
 
-# @pytest.mark.xdist_custom(name="low_4")
-# def test_writer():
-#     time.sleep(2)
-#     file_path = pathlib.Path("/home/chrisiaconetti/dev/test_ran.txt")
-#     with open(file_path, 'w') as writer:
-#         writer.write("The test ran!\n")
-#     assert True
 
 @pytest.mark.xdist_custom(name="low_4")
 def test_1():
