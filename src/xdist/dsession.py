@@ -218,7 +218,8 @@ class DSession:
         self.report_line("[-] [rni] Shutdown nodes")
         for node in self.sched.nodes:
             # self.report_line(f"[-] [rif] Shutting down {node.workerinfo['id']}: clear:{self.is_node_clear(node)} finishing:{self.is_node_finishing(node)}")
-            node.shutdown()
+            if self.is_node_finishing(node):
+                node.shutdown()
 
     def reschedule_if_needed(self):
         if self.are_all_nodes_finishing() and self.ready_to_run_tests and self.sched.do_resched:
@@ -399,9 +400,11 @@ class DSession:
             if isinstance(self.sched, CustomGroup) and self.ready_to_run_tests and self.are_all_active_nodes_collected():
                 # we're coming back here after finishing a batch of tests - so start the next batch
                 self.reschedule()
+                self.reset_nodes_if_needed()
             else:
                 self.ready_to_run_tests = True
                 self.sched.schedule()
+                self.reset_nodes_if_needed()
 
     def worker_logstart(
         self,
