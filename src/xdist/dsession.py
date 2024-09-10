@@ -155,18 +155,8 @@ class DSession:
         while 1:
             if not self._active_nodes:
                 # Worker teardown + recreation only occurs for CustomGroup Scheduler
-                if self.remake_nodes and isinstance(self.sched, CustomGroup):
-                    self.terminal.write_line("\n")
-                    self.remake_nodes = False
-
-                    num_workers = self.sched.dist_groups[self.sched.pending_groups[0]]['group_workers']
-                    self.trdist._status = {}
-
-                    new_nodes = self.nodemanager.setup_nodes(self.saved_put, num_workers)
-                    self._active_nodes = set()
-                    self._active_nodes.update(new_nodes)
-                    self.sched.node2pending = {}
-                    self.sched.do_resched = True
+                if isinstance(self.sched, CustomGroup):
+                    self.prepare_for_reschedule_if_needed()
                 else:
                     # We aren't using CustomGroup scheduler and everything has died: stop looping
                     self.triggershutdown()
@@ -177,22 +167,7 @@ class DSession:
             except Empty:
                 # Custom logic for CustomGroup scheduler:
                 if isinstance(self.sched, CustomGroup):
-                    all_nodes_finishing = True
-                    for node in self.sched.nodes:
-                        if len(self.sched.node2pending[node]) not in [0, 1]:
-                            all_nodes_finishing = False
-                    if all_nodes_finishing and self.actually_started:
-                        # If all have 1 test remaining (or 0, since some nodes won't be used)
-                        # Then have each node shutdown, then restart each node, and replace the nodes in sched.nodes,
-                        # then call check_schedule()
-                        if not self.sched.do_resched:
-                            if len(self.sched.pending) != 0:
-                                self.remake_nodes = True
-                            for node in self.sched.nodes:
-                                node.shutdown()
-                        else:
-                            self.sched.do_resched = False
-                            self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
+                    self.reschedule_if_needed()
                 continue
 
         callname, kwargs = eventcall
@@ -204,6 +179,50 @@ class DSession:
         assert self.sched is not None
         if self.sched.tests_finished:
             self.triggershutdown()
+
+    def reschedule_if_needed(self):
+        all_nodes_finishing = True
+        for node in self.sched.nodes:
+            if len(self.sched.node2pending[node]) not in [0, 1]:
+                all_nodes_finishing = False
+        if all_nodes_finishing and self.actually_started:
+            # If all have 1 test remaining (or 0, since some nodes won't be used)
+            # Then have each node shutdown, then restart each node, and replace the nodes in sched.nodes,
+            # then call check_schedule()
+            if not self.sched.do_resched:
+                if len(self.sched.pending) != 0:
+                    self.terminal.write_line("[-] Remake nodes")
+                    self.remake_nodes = True
+                self.terminal.write_line("[-] shutdown nodes")
+                for node in self.sched.nodes:
+                    self.terminal.write_line(f"[-] shutting down {node.workerinfo['id']}: clear:{self.is_node_clear(node)} finishing:{self.is_node_finishing(node)}")
+                    node.shutdown()
+            else:
+                self.sched.do_resched = False
+                self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
+
+    def is_node_finishing(self, node: WorkerController):
+        pending = self.sched.node2pending.get(node)
+        return pending is not None and len(pending) < 2
+
+    def is_node_clear(self, node: WorkerController):
+        pending = self.sched.node2pending.get(node)
+        return pending is None or len(pending) == 0
+
+    def are_all_nodes_finishing(self):
+        return all(self.is_node_finishing(node) for node in self.sched.nodes)
+
+    def prepare_for_reschedule_if_needed(self):
+        if self.remake_nodes:
+            self.terminal.write_line("\n[-] Remaking nodes")
+            self.remake_nodes = False
+            num_workers = self.sched.dist_groups[self.sched.pending_groups[0]]['group_workers']
+            self.trdist._status = {}
+            new_nodes = self.nodemanager.setup_nodes(self.saved_put, num_workers)
+            self._active_nodes = set()
+            self._active_nodes.update(new_nodes)
+            self.sched.node2pending = {}
+            self.sched.do_resched = True
 
     #
     # callbacks for processing events from workers

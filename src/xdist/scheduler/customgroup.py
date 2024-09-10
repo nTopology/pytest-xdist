@@ -189,10 +189,13 @@ class CustomGroup:
                     dist_group_key = self.pending_groups.pop(0)
                     dist_group = self.dist_groups[dist_group_key]
                     nodes = cycle(self.nodes[0:dist_group['group_workers']])
+                    schedule_log=set()
                     for _ in range(len(dist_group['test_indices'])):
-                        self._send_tests_group(next(nodes), 1, dist_group_key)
+                        n = next(nodes)
+                        self._send_tests_group(n, 1, dist_group_key)
+                        schedule_log.add(n.gateway.id)
                     del self.dist_groups[dist_group_key]
-                    self.terminal.write_line(f"Processed scheduling for {dist_group_key}")
+                    self.terminal.write_line(f"\n[-] check_schedule: processed scheduling for {dist_group_key}: {' '.join(sorted(schedule_log))}")
 
         else:
             pending = self.node2pending.get(node)
@@ -297,10 +300,13 @@ class CustomGroup:
         dist_group_key = self.pending_groups.pop(0)
         dist_group = self.dist_groups[dist_group_key]
         nodes = cycle(self.nodes[0:dist_group['group_workers']])
+        scheduled_log=set()
         for _ in range(len(dist_group['test_indices'])):
-            self._send_tests_group(next(nodes), 1, dist_group_key)
+            n = next(nodes)
+            self._send_tests_group(n, 1, dist_group_key)
+            scheduled_log.add(n.gateway.id)
         del self.dist_groups[dist_group_key]
-        self.terminal.write_line(f"Processed scheduling for {dist_group_key}")
+        self.terminal.write_line(f"\n[-] schedule: processed scheduling for {dist_group_key}: {' '.join(scheduled_log)}")
 
     def _send_tests(self, node: WorkerController, num: int) -> None:
         tests_per_node = self.pending[:num]
