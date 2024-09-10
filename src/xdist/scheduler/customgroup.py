@@ -175,7 +175,7 @@ class CustomGroup:
         heuristic to influence how many tests the node is assigned.
         """
         if node.shutting_down:
-            self.terminal.write_line(f"{node.workerinput['workerid']} is already shutting down")
+            self.terminal.write_line(f"[-] [csg] {node.workerinput['workerid']} is already shutting down")
             return
 
         if self.pending:
@@ -195,12 +195,12 @@ class CustomGroup:
                         self._send_tests_group(n, 1, dist_group_key)
                         schedule_log.add(n.gateway.id)
                     del self.dist_groups[dist_group_key]
-                    self.terminal.write_line(f"\n[-] check_schedule: processed scheduling for {dist_group_key}: {' '.join(sorted(schedule_log))}")
+                    self.terminal.write_line(f"\n[-] [csg] check_schedule: processed scheduling for {dist_group_key}: {' '.join(sorted(schedule_log))}")
 
         else:
             pending = self.node2pending.get(node)
             if len(pending) < 2:
-                self.terminal.write_line(f"Shutting down {node.workerinput['workerid']} because only one case is pending")
+                self.terminal.write_line(f"[-] [csg] Shutting down {node.workerinput['workerid']} because only one case is pending")
                 node.shutdown()
 
         self.log("num items waiting for node:", len(self.pending))
@@ -306,7 +306,7 @@ class CustomGroup:
             self._send_tests_group(n, 1, dist_group_key)
             scheduled_log.add(n.gateway.id)
         del self.dist_groups[dist_group_key]
-        self.terminal.write_line(f"\n[-] schedule: processed scheduling for {dist_group_key}: {' '.join(scheduled_log)}")
+        self.terminal.write_line(f"\n[-] [csg] schedule: processed scheduling for {dist_group_key}: {' '.join(scheduled_log)}")
 
     def _send_tests(self, node: WorkerController, num: int) -> None:
         tests_per_node = self.pending[:num]

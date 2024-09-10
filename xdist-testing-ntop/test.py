@@ -22,6 +22,31 @@ def test_4():
     time.sleep(2)
     assert True
 
+@pytest.mark.xdist_custom(name="low_4")
+def test_4a():
+    time.sleep(2)
+    assert True
+
+@pytest.mark.xdist_custom(name="low_4")
+def test_4b():
+    time.sleep(2)
+    assert True
+
+@pytest.mark.xdist_custom(name="low_4")
+def test_4c():
+    time.sleep(2)
+    assert True
+
+@pytest.mark.xdist_custom(name="low_4")
+def test_4d():
+    time.sleep(2)
+    assert True
+
+@pytest.mark.xdist_custom(name="low_4")
+def test_4e():
+    time.sleep(2)
+    assert True
+
 @pytest.mark.xdist_custom(name="med_2")
 def test_5():
     time.sleep(3)
