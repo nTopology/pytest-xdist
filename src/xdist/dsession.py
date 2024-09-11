@@ -8,6 +8,7 @@ import sys
 from typing import Any
 from typing import Sequence
 import warnings
+import traceback
 
 import execnet
 import pytest
@@ -286,7 +287,10 @@ class DSession:
             node.ensure_teardown()
             self._active_nodes.remove(node)
             if self.are_all_nodes_done():
-                self.prepare_for_reschedule()
+                try:
+                    self.prepare_for_reschedule()
+                except Exception as e:
+                    self.shouldstop = f"Exception caught during preparation for rescheduling. Giving up.\n{''.join(traceback.format_exception(e))}"
             return
         self.config.hook.pytest_testnodedown(node=node, error=None)
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
@@ -442,7 +446,10 @@ class DSession:
         self.sched.mark_test_complete(node, item_index, duration)
         if isinstance(self.sched, CustomGroup):
             if self.are_all_nodes_finishing():
-                self.reset_nodes()
+                if self.shouldstop:
+                    self.report_line("Won't reschedule - should stop.")
+                else:
+                    self.reset_nodes()
 
     def worker_unscheduled(
         self, node: WorkerController, indices: Sequence[int]
