@@ -157,8 +157,7 @@ class DSession:
         while 1:
             if not self._active_nodes:
                 # Worker teardown + recreation only occurs for CustomGroup Scheduler
-                if isinstance(self.sched, CustomGroup):
-                    #self.prepare_for_reschedule_if_needed()
+                if isinstance(self.sched, CustomGroup) and self.remake_nodes:
                     pass
                 else:
                     # We aren't using CustomGroup scheduler and everything has died: stop looping
@@ -166,16 +165,8 @@ class DSession:
                     raise RuntimeError("Unexpectedly no active workers available")
             try:
                 eventcall = self.queue.get(timeout=2.0)
-                # callname, kwargs = eventcall
-                # if "node" in kwargs:
-                #     self.report_line(f"Event {kwargs['node'].gateway.id} {callname}")
                 break
             except Empty:
-                # Custom logic for CustomGroup scheduler:
-                if isinstance(self.sched, CustomGroup):
-                    #self.reset_nodes_if_needed()
-                    #self.reschedule_if_needed()
-                    pass
                 continue
 
         callname, kwargs = eventcall
@@ -190,53 +181,59 @@ class DSession:
 
 
     def is_node_finishing(self, node: WorkerController):
+        """Check if a test worker is considered to be finishing.
+
+        Evaluate whether it's on its last test, or if no tests are pending.
+        """
         pending = self.sched.node2pending.get(node)
         return pending is not None and len(pending) < 2
 
+
     def is_node_clear(self, node: WorkerController):
+        """Check if a test worker has no pending tests."""
         pending = self.sched.node2pending.get(node)
         return pending is None or len(pending) == 0
 
+
     def are_all_nodes_finishing(self):
+        """Check if all workers are finishing (See 'is_node_finishing' above)."""
         return all(self.is_node_finishing(node) for node in self.sched.nodes)
 
+
     def are_all_nodes_done(self):
+        """Check if all nodes have reported to finish."""
         return all(s == "finished" for s in self.worker_status.values())
 
+
     def are_all_active_nodes_collected(self):
+        """Check if all nodes have reported collection to be complete."""
         if not all(n.gateway.id in self.worker_status for n in self._active_nodes):
             return False
         return all(self.worker_status[n.gateway.id] == "collected" for n in self._active_nodes)
+
 
     def reset_nodes_if_needed(self):
         if self.are_all_nodes_finishing() and self.ready_to_run_tests and not self.sched.do_resched:
             self.reset_nodes()
 
+
     def reset_nodes(self):
+        """Issue shutdown notices to workers for rescheduling purposes."""
         if len(self.sched.pending) != 0:
-            self.report_line("[-] [rni] Remake nodes")
             self.remake_nodes = True
-        self.report_line("[-] [rni] Shutdown nodes")
         for node in self.sched.nodes:
-            # self.report_line(f"[-] [rif] Shutting down {node.workerinfo['id']}: clear:{self.is_node_clear(node)} finishing:{self.is_node_finishing(node)}")
             if self.is_node_finishing(node):
                 node.shutdown()
 
-    def reschedule_if_needed(self):
-        if self.are_all_nodes_finishing() and self.ready_to_run_tests and self.sched.do_resched:
-            self.reschedule()
 
     def reschedule(self):
-        self.report_line("\n[-] [rsi] Rescheduling.")
+        """Reschedule tests."""
         self.sched.do_resched = False
         self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
 
-    def prepare_for_reschedule_if_needed(self):
-        if self.remake_nodes:
-            self.prepare_for_reschedule()
 
     def prepare_for_reschedule(self):
-        self.report_line("\n[-] [pfr] Remaking nodes")
+        """Update test workers and their status tracking so rescheduling is ready."""
         self.remake_nodes = False
         num_workers = self.sched.dist_groups[self.sched.pending_groups[0]]['group_workers']
         self.trdist._status = {}
@@ -312,6 +309,10 @@ class DSession:
         self._active_nodes.remove(node)
 
     def update_worker_status(self, node, status):
+        """Track the worker status.
+
+        Can be used at callbacks like 'worker_workerfinished' so we remember wchic event was reported last by each worker.
+        """
         self.worker_status[node.workerinfo["id"]] = status
 
     def worker_internal_error(
