@@ -409,7 +409,8 @@ class DSession:
             else:
                 self.ready_to_run_tests = True
                 self.sched.schedule()
-                self.reset_nodes_if_needed()
+                if isinstance(self.sched, CustomGroup):
+                    self.reset_nodes_if_needed()
 
     def worker_logstart(
         self,
