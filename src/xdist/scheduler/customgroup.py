@@ -14,7 +14,7 @@ class CustomGroup:
     """Implement grouped load scheduling across a variable number of nodes.
 
     This distributes tests into groups based on the presence of xdist_custom pytest marks.
-    Groups are ran serially with tests within each group running in parallel.
+    Groups are ran sequentially with tests within each group running in parallel.
     The number of workers assigned to each group is based on the xdist_custom pytest mark.
     Tests without the xdist_custom pytest mark are assigned to a "default" group and run
     using all available workers.
