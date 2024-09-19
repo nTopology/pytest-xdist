@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from itertools import cycle
+from typing import Any
 from typing import Sequence
 
 import pytest
@@ -62,6 +63,9 @@ class LoadScheduling:
         self.node2collection: dict[WorkerController, list[str]] = {}
         self.node2pending: dict[WorkerController, list[int]] = {}
         self.pending: list[int] = []
+        self.do_resched: bool = False
+        self.dist_groups: dict[str, Any] = {}
+        self.pending_groups: list[str] = []
         self.collection: list[str] | None = None
         if log is None:
             self.log = Producer("loadsched")
@@ -176,7 +180,8 @@ class LoadScheduling:
     ) -> None:
         raise NotImplementedError()
 
-    def check_schedule(self, node: WorkerController, duration: float = 0) -> None:
+
+    def check_schedule(self, node: WorkerController, duration: float = 0, from_dsession: bool = False) -> None:
         """Maybe schedule new items on the node.
 
         If there are any globally pending nodes left then this will

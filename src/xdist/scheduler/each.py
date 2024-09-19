@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from typing import Sequence
 
 import pytest
@@ -29,6 +30,10 @@ class EachScheduling:
         self.numnodes = len(parse_spec_config(config))
         self.node2collection: dict[WorkerController, list[str]] = {}
         self.node2pending: dict[WorkerController, list[int]] = {}
+        self.do_resched: bool = False
+        self.pending: list[int] = []
+        self.dist_groups: dict[str, Any] = {}
+        self.pending_groups: list[str] = []
         self._started: list[WorkerController] = []
         self._removed2pending: dict[WorkerController, list[int]] = {}
         if log is None:
@@ -105,6 +110,9 @@ class EachScheduling:
                     pending = self._removed2pending.pop(deadnode)
                     self.node2pending[node] = pending
                     break
+
+    def check_schedule(self, node: WorkerController, duration: float = 0, from_dsession: bool = False) -> None:
+        raise NotImplementedError()
 
     def mark_test_complete(
         self, node: WorkerController, item_index: int, duration: float = 0

@@ -205,7 +205,7 @@ class CustomGroup:
     ) -> None:
         raise NotImplementedError()
 
-    def check_schedule(self, node: WorkerController, duration: float = 0, from_dsession=False) -> None:
+    def check_schedule(self, node: WorkerController, duration: float = 0, from_dsession: bool = False) -> None:
         """Maybe schedule new items on the node.
 
         If there are any globally pending nodes left then this will
@@ -228,7 +228,7 @@ class CustomGroup:
                     dist_group_key = self.pending_groups.pop(0)
                     dist_group = self.dist_groups[dist_group_key]
                     nodes = cycle(self.nodes[0:dist_group['group_workers']])
-                    schedule_log = {n.gateway.id:[] for n in self.nodes[0:dist_group['group_workers']]}
+                    schedule_log: dict[str, Any] = {n.gateway.id:[] for n in self.nodes[0:dist_group['group_workers']]}
                     for _ in range(len(dist_group['test_indices'])):
                         n = next(nodes)
                         #needs cleaner way to be identified
@@ -242,7 +242,7 @@ class CustomGroup:
                     self.report_line(message)
 
         else:
-            pending = self.node2pending.get(node)
+            pending = self.node2pending.get(node, [])
             if len(pending) < 2:
                 self.report_line(
                     f"[-] [csg] Shutting down {node.workerinput['workerid']} because only one case is pending"
@@ -306,7 +306,7 @@ class CustomGroup:
         if not self.collection:
             return
 
-        dist_groups = {}
+        dist_groups: dict[str, dict[Any, Any]] = {}
 
         if self.is_first_time:
             for i, test in enumerate(self.collection):
@@ -343,7 +343,7 @@ class CustomGroup:
         dist_group_key = self.pending_groups.pop(0)
         dist_group = self.dist_groups[dist_group_key]
         nodes = cycle(self.nodes[0:dist_group['group_workers']])
-        schedule_log = {n.gateway.id: [] for n in self.nodes[0:dist_group['group_workers']]}
+        schedule_log: dict[str, Any] = {n.gateway.id: [] for n in self.nodes[0:dist_group['group_workers']]}
         for _ in range(len(dist_group['test_indices'])):
             n = next(nodes)
             # needs cleaner way to be identified
@@ -362,7 +362,7 @@ class CustomGroup:
             self.node2pending[node].extend(tests_per_node)
             node.send_runtest_some(tests_per_node)
 
-    def _send_tests_group(self, node: WorkerController, num: int, dist_group_key) -> None:
+    def _send_tests_group(self, node: WorkerController, num: int, dist_group_key: str) -> None:
         tests_per_node = self.dist_groups[dist_group_key]['pending_indices'][:num]
         if tests_per_node:
             del self.dist_groups[dist_group_key]['pending_indices'][:num]
