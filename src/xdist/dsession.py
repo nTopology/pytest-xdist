@@ -5,16 +5,17 @@ from enum import Enum
 from queue import Empty
 from queue import Queue
 import sys
+import traceback
 from typing import Any
 from typing import Sequence
 import warnings
-import traceback
 
 import execnet
 import pytest
 
 from xdist.remote import Producer
 from xdist.remote import WorkerInfo
+from xdist.scheduler import CustomGroup
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadFileScheduling
 from xdist.scheduler import LoadGroupScheduling
@@ -22,7 +23,6 @@ from xdist.scheduler import LoadScheduling
 from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import Scheduling
 from xdist.scheduler import WorkStealingScheduling
-from xdist.scheduler import CustomGroup
 from xdist.workermanage import NodeManager
 from xdist.workermanage import WorkerController
 
@@ -287,7 +287,9 @@ class DSession:
                 try:
                     self.prepare_for_reschedule()
                 except Exception as e:
-                    self.shouldstop = f"Exception caught during preparation for rescheduling. Giving up.\n{''.join(traceback.format_exception(e))}"
+                    msg = ("Exception caught during preparation for rescheduling. Giving up."
+                           f"\n{''.join(traceback.format_exception(e))}")
+                    self.shouldstop = msg
             return
         self.config.hook.pytest_testnodedown(node=node, error=None)
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
@@ -311,7 +313,8 @@ class DSession:
     def update_worker_status(self, node, status):
         """Track the worker status.
 
-        Can be used at callbacks like 'worker_workerfinished' so we remember wchic event was reported last by each worker.
+        Can be used at callbacks like 'worker_workerfinished' so we remember wchic event
+        was reported last by each worker.
         """
         self.worker_status[node.workerinfo["id"]] = status
 

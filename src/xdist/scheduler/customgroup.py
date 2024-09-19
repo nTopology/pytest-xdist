@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from itertools import cycle
-from typing import Sequence, Any
+from typing import Any
+from typing import Sequence
 
 import pytest
 
@@ -9,6 +10,7 @@ from xdist.remote import Producer
 from xdist.report import report_collection_diff
 from xdist.workermanage import parse_spec_config
 from xdist.workermanage import WorkerController
+
 
 class CustomGroup:
     """Implement grouped load scheduling across a variable number of nodes.
@@ -235,13 +237,16 @@ class CustomGroup:
 
                         self._send_tests_group(n, 1, dist_group_key)
                     del self.dist_groups[dist_group_key]
-                    message = f"\n[-] [csg] check_schedule: processed scheduling for {dist_group_key}: {' '.join([f'{nid} ({len(nt)})' for nid,nt in schedule_log.items()])}"
+                    message = (f"\n[-] [csg] check_schedule: processed scheduling for {dist_group_key}:"
+                               f" {' '.join([f'{nid} ({len(nt)})' for nid,nt in schedule_log.items()])}")
                     self.report_line(message)
 
         else:
             pending = self.node2pending.get(node)
             if len(pending) < 2:
-                self.report_line(f"[-] [csg] Shutting down {node.workerinput['workerid']} because only one case is pending")
+                self.report_line(
+                    f"[-] [csg] Shutting down {node.workerinput['workerid']} because only one case is pending"
+                )
                 node.shutdown()
 
         self.log("num items waiting for node:", len(self.pending))
@@ -346,7 +351,8 @@ class CustomGroup:
             schedule_log[n.gateway.id].extend(tests_per_node)
             self._send_tests_group(n, 1, dist_group_key)
         del self.dist_groups[dist_group_key]
-        message = f"\n[-] [csg] schedule: processed scheduling for {dist_group_key}: {' '.join([f'{nid} ({len(nt)})' for nid, nt in schedule_log.items()])}"
+        message = ("\n[-] [csg] schedule: processed scheduling for "
+        f"{dist_group_key}: {' '.join([f'{nid} ({len(nt)})' for nid, nt in schedule_log.items()])}")
         self.report_line(message)
 
     def _send_tests(self, node: WorkerController, num: int) -> None:
