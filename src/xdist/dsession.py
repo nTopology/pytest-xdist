@@ -192,14 +192,6 @@ class DSession:
         return pending is not None and len(pending) < 2
 
 
-    def is_node_clear(self, node: WorkerController) -> bool:
-        """Check if a test worker has no pending tests."""
-        assert self.sched is not None
-        assert type(self.sched) is CustomGroup
-        pending = self.sched.node2pending.get(node)
-        return pending is None or len(pending) == 0
-
-
     def are_all_nodes_finishing(self) -> bool:
         """Check if all workers are finishing (See 'is_node_finishing' above)."""
         assert self.sched is not None
