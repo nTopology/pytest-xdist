@@ -176,7 +176,6 @@ class LoadScheduling:
     ) -> None:
         raise NotImplementedError()
 
-
     def check_schedule(self, node: WorkerController, duration: float = 0) -> None:
         """Maybe schedule new items on the node.
 

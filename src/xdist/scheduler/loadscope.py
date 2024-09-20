@@ -93,6 +93,7 @@ class LoadScopeScheduling:
     def __init__(self, config: pytest.Config, log: Producer | None = None) -> None:
         self.numnodes = len(parse_spec_config(config))
         self.collection: list[str] | None = None
+
         self.workqueue: OrderedDict[str, dict[str, bool]] = OrderedDict()
         self.assigned_work: dict[WorkerController, dict[str, dict[str, bool]]] = {}
         self.registered_collections: dict[WorkerController, list[str]] = {}
