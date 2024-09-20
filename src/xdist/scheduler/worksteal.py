@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
 from typing import NamedTuple
 from typing import Sequence
 
@@ -71,9 +70,6 @@ class WorkStealingScheduling:
         self.node2pending: dict[WorkerController, list[int]] = {}
         self.pending: list[int] = []
         self.collection: list[str] | None = None
-        self.do_resched: bool = False
-        self.dist_groups: dict[str, Any] = {}
-        self.pending_groups: list[str] = []
         if log is None:
             self.log = Producer("workstealsched")
         else:
@@ -197,8 +193,7 @@ class WorkStealingScheduling:
         self.pending.extend(indices)
         self.check_schedule()
 
-    def check_schedule(self, node: WorkerController | None = None, duration: float = 0, from_dsession: bool = False
-                       ) -> None:
+    def check_schedule(self) -> None:
         """Reschedule tests/perform load balancing."""
         nodes_up = [
             NodePending(node, pending)

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
 from typing import Protocol
 from typing import Sequence
 
@@ -8,12 +7,6 @@ from xdist.workermanage import WorkerController
 
 
 class Scheduling(Protocol):
-    node2pending: Any
-    do_resched: bool
-    pending: list[int]
-    dist_groups: dict[str, Any]
-    pending_groups: list[str]
-
     @property
     def nodes(self) -> list[WorkerController]: ...
 
@@ -33,8 +26,6 @@ class Scheduling(Protocol):
         node: WorkerController,
         collection: Sequence[str],
     ) -> None: ...
-
-    def check_schedule(self, node: WorkerController, duration: float = 0, from_dsession: bool = False) -> None: ...
 
     def mark_test_complete(
         self,

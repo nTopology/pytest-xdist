@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Any
 from typing import NoReturn
 from typing import Sequence
 
@@ -94,14 +93,10 @@ class LoadScopeScheduling:
     def __init__(self, config: pytest.Config, log: Producer | None = None) -> None:
         self.numnodes = len(parse_spec_config(config))
         self.collection: list[str] | None = None
-        self.node2pending: dict[WorkerController, list[int]] = {}
         self.workqueue: OrderedDict[str, dict[str, bool]] = OrderedDict()
         self.assigned_work: dict[WorkerController, dict[str, dict[str, bool]]] = {}
         self.registered_collections: dict[WorkerController, list[str]] = {}
-        self.do_resched: bool = False
-        self.pending: list[int] = []
-        self.dist_groups: dict[str, Any] = {}
-        self.pending_groups: list[str] = []
+
         if log is None:
             self.log = Producer("loadscopesched")
         else:
@@ -166,9 +161,6 @@ class LoadScopeScheduling:
         """
         assert node not in self.assigned_work
         self.assigned_work[node] = {}
-
-    def check_schedule(self, node: WorkerController, duration: float = 0, from_dsession: bool = False) -> None:
-        raise NotImplementedError()
 
     def remove_node(self, node: WorkerController) -> str | None:
         """Remove a node from the scheduler.

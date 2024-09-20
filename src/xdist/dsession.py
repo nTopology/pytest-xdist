@@ -187,6 +187,7 @@ class DSession:
         Evaluate whether it's on its last test, or if no tests are pending.
         """
         assert self.sched is not None
+        assert type(self.sched) is CustomGroup
         pending = self.sched.node2pending.get(node)
         return pending is not None and len(pending) < 2
 
@@ -194,6 +195,7 @@ class DSession:
     def is_node_clear(self, node: WorkerController) -> bool:
         """Check if a test worker has no pending tests."""
         assert self.sched is not None
+        assert type(self.sched) is CustomGroup
         pending = self.sched.node2pending.get(node)
         return pending is None or len(pending) == 0
 
@@ -218,6 +220,7 @@ class DSession:
 
     def reset_nodes_if_needed(self) -> None:
         assert self.sched is not None
+        assert type(self.sched) is CustomGroup
         if self.are_all_nodes_finishing() and self.ready_to_run_tests and not self.sched.do_resched:
             self.reset_nodes()
 
@@ -225,6 +228,7 @@ class DSession:
     def reset_nodes(self) -> None:
         """Issue shutdown notices to workers for rescheduling purposes."""
         assert self.sched is not None
+        assert type(self.sched) is CustomGroup
         if len(self.sched.pending) != 0:
             self.remake_nodes = True
         for node in self.sched.nodes:
@@ -235,12 +239,14 @@ class DSession:
     def reschedule(self) -> None:
         """Reschedule tests."""
         assert self.sched is not None
+        assert type(self.sched) is CustomGroup
         self.sched.do_resched = False
         self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
 
 
     def prepare_for_reschedule(self) -> None:
         """Update test workers and their status tracking so rescheduling is ready."""
+        assert type(self.sched) is CustomGroup
         assert self.sched is not None
         self.remake_nodes = False
         num_workers = self.sched.dist_groups[self.sched.pending_groups[0]]['group_workers']
@@ -251,6 +257,7 @@ class DSession:
         self._active_nodes = set()
         self._active_nodes.update(new_nodes)
         self.sched.node2pending = {}
+        assert type(self.sched) is CustomGroup
         self.sched.do_resched = True
 
     #
